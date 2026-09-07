@@ -20,6 +20,8 @@ export function requestProIAP(callbacks: {
   onSuccess: () => void
   onError?: (code: string, message: string) => void
 }): () => void {
+  // Toss 앱 밖(일반 웹 배포)에서는 IAP 브릿지가 없어 예외를 던질 수 있으므로 안전하게 처리.
+  try {
   const cleanup = IAP.createOneTimePurchaseOrder({
     options: {
       sku: PRO_SKU,
@@ -51,4 +53,8 @@ export function requestProIAP(callbacks: {
   })
 
   return cleanup ?? (() => {})
+  } catch {
+    callbacks.onError?.('UNSUPPORTED', '이 환경에서는 결제를 사용할 수 없어요.')
+    return () => {}
+  }
 }
