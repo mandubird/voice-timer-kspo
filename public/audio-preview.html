@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>음성 파일 미리듣기</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, sans-serif; background: #f5f5f7; color: #111; padding: 24px 24px 120px; }
+  h1 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+  .sub { font-size: 13px; color: #888; margin-bottom: 20px; }
+  .pack-tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+  .pack-tab { padding: 8px 20px; border-radius: 20px; border: 1.5px solid #ddd; background: white; cursor: pointer; font-size: 14px; font-weight: 600; }
+  .pack-tab.active { background: #2F6BFF; color: white; border-color: #2F6BFF; }
+  .section { background: white; border-radius: 16px; padding: 16px 20px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); transition: box-shadow 0.2s; }
+  .section.passed { box-shadow: 0 0 0 2px #34c759, 0 1px 4px rgba(0,0,0,0.07); }
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .section-title { font-size: 13px; font-weight: 700; color: #999; text-transform: uppercase; letter-spacing: 0.5px; }
+  .pass-btn { padding: 5px 14px; border-radius: 20px; border: 1.5px solid #34c759; background: white; color: #34c759; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.15s; }
+  .pass-btn:hover { background: #f0fff4; }
+  .pass-btn.active { background: #34c759; color: white; }
+  .pass-badge { display: none; font-size: 12px; font-weight: 700; color: #34c759; margin-left: 8px; }
+  .section.passed .pass-badge { display: inline; }
+  .section.passed .section-title { color: #34c759; }
+  .file-grid { display: flex; flex-direction: column; gap: 4px; }
+  .file-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; transition: background 0.1s; cursor: pointer; }
+  .file-row:hover { background: #f0f4ff; }
+  .file-row.checked { background: #fff3f3; }
+  .play-btn { width: 32px; height: 32px; border-radius: 50%; background: #2F6BFF; border: none; cursor: pointer; color: white; font-size: 12px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .play-btn:hover { background: #1a55e0; }
+  .play-btn.playing { background: #ff4444; }
+  .file-name { font-size: 13px; font-weight: 600; color: #333; min-width: 190px; }
+  .file-text { font-size: 13px; color: #666; flex: 1; }
+  .exist-status { font-size: 11px; width: 60px; text-align: right; flex-shrink: 0; }
+  .cb { width: 18px; height: 18px; accent-color: #ff3b30; cursor: pointer; flex-shrink: 0; }
+
+  /* 하단 고정 패널 */
+  .bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid #e0e0e0; padding: 16px 24px; box-shadow: 0 -4px 20px rgba(0,0,0,0.08); }
+  .bottom-inner { max-width: 900px; margin: 0 auto; }
+  .bottom-info { font-size: 13px; color: #666; margin-bottom: 10px; }
+  .bottom-info strong { color: #ff3b30; }
+  .cmd-box { background: #1e1e1e; color: #d4f8a0; font-family: 'SF Mono', monospace; font-size: 12px; border-radius: 10px; padding: 12px 16px; white-space: pre-wrap; word-break: break-all; max-height: 120px; overflow-y: auto; margin-bottom: 10px; display: none; }
+  .bottom-btns { display: flex; gap: 8px; }
+  .btn { padding: 10px 20px; border-radius: 10px; border: none; cursor: pointer; font-size: 14px; font-weight: 600; }
+  .btn-show  { background: #ff3b30; color: white; }
+  .btn-copy  { background: #2F6BFF; color: white; }
+  .btn-run   { background: #ff9500; color: white; }
+  .btn-clear { background: #f0f0f0; color: #555; }
+  .btn:disabled { opacity: 0.4; cursor: default; }
+  .copied { background: #34c759 !important; }
+  .log-box { background: #1e1e1e; color: #d4f8a0; font-family: 'SF Mono', monospace; font-size: 12px; border-radius: 10px; padding: 12px 16px; white-space: pre-wrap; max-height: 180px; overflow-y: auto; margin-bottom: 10px; display: none; }
+  .voice-selector { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 13px; color: #555; }
+  .voice-selector label { display: flex; align-items: center; gap: 5px; cursor: pointer; font-weight: 600; }
+  .voice-selector input[type=checkbox] { width: 16px; height: 16px; accent-color: #2F6BFF; cursor: pointer; }
+  .api-count { font-size: 12px; color: #ff9500; font-weight: 700; }
+</style>
+</head>
+<body>
+<h1>🎙 음성 파일 미리듣기</h1>
+<p class="sub">▶ 재생 · 체크박스로 재생성할 파일 선택 · 하단에서 명령어 복사</p>
+
+<div class="pack-tabs">
+  <button class="pack-tab active" onclick="setPack('default', this)">★ 유료 프리미엄 여성 (default)</button>
+  <button class="pack-tab" onclick="setPack('energy', this)">★ 유료 에너지 남성 (energy)</button>
+</div>
+
+<div id="content"></div>
+
+<div class="bottom-bar">
+  <div class="bottom-inner">
+    <div class="bottom-info" id="bottom-info">선택된 파일 없음 — 재생성할 파일을 체크하세요</div>
+    <div class="voice-selector">
+      생성할 팩:
+      <label><input type="checkbox" id="vc-default" checked onchange="updateBottom()"> default (기본)</label>
+      <label><input type="checkbox" id="vc-energy" onchange="updateBottom()"> energy (에너지)</label>
+      <span class="api-count" id="api-count"></span>
+    </div>
+    <div class="cmd-box" id="cmd-box"></div>
+    <div class="log-box" id="log-box"></div>
+    <div class="bottom-btns">
+      <button class="btn btn-run" id="btn-run" onclick="runDirect()" disabled>▶ 직접 실행</button>
+      <button class="btn btn-show" id="btn-show" onclick="showCmd()" disabled>명령어 생성</button>
+      <button class="btn btn-copy" id="btn-copy" onclick="copyCmd()" disabled>클립보드 복사</button>
+      <button class="btn btn-clear" onclick="clearAll()">선택 초기화</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentPack = 'default'
+let currentAudio = null
+let currentBtn = null
+const checked = new Set()
+
+// 통과 상태 — localStorage에 저장
+const PASS_KEY = 'audio_preview_passed'
+const passedSections = new Set(JSON.parse(localStorage.getItem(PASS_KEY) || '[]'))
+
+function togglePass(secKey, sectionEl, btn) {
+  if (passedSections.has(secKey)) {
+    passedSections.delete(secKey)
+    sectionEl.classList.remove('passed')
+    btn.textContent = '통과'
+    btn.classList.remove('active')
+  } else {
+    passedSections.add(secKey)
+    sectionEl.classList.add('passed')
+    btn.textContent = '✅ 통과'
+    btn.classList.add('active')
+  }
+  localStorage.setItem(PASS_KEY, JSON.stringify([...passedSections]))
+}
+
+const sections = [
+  { title: '🚀 공통 시작/종료', files: [
+    { name: 'common_start_01',   text: '시작해볼게요.' },
+    { name: 'common_start_02',   text: '바로 시작합니다.' },
+    { name: 'common_start_03',   text: '좋아요, 시작해볼게요.' },
+    { name: 'common_ready_01',   text: '준비되셨죠?' },
+    { name: 'common_3sec_01',    text: '3초 뒤 시작합니다.' },
+    { name: 'common_end_01',     text: '종료됐어요.' },
+    { name: 'common_end_02',     text: '여기까지 완료예요.' },
+    { name: 'common_done_01',    text: '한 세트 완료예요.' },
+    { name: 'common_restart_01', text: '다시 시작해볼게요.' },
+  ]},
+  { title: '⏱ 공통 시간 안내', files: [
+    { name: 'common_half_01',  text: '절반 왔어요.' },
+    { name: 'common_half_02',  text: '반 정도 왔어요.' },
+    { name: 'common_half_03',  text: '좋아요, 절반 넘겼어요.' },
+    { name: 'common_10sec_01', text: '10초 남았어요.' },
+    { name: 'common_10sec_02', text: '이제 10초만 남았어요.' },
+    { name: 'common_10sec_03', text: '10초, 조금만 더 가볼게요.' },
+    { name: 'common_5sec_01',  text: '5초 남았어요.' },
+    { name: 'common_last_01',  text: '거의 다 왔어요.' },
+    { name: 'common_last_02',  text: '마무리만 남았어요.' },
+  ]},
+  { title: '💪 운동', files: [
+    { name: 'workout_push_01',   text: '좋아요, 그대로 갑니다.' },
+    { name: 'workout_push_02',   text: '조금만 더 버텨볼게요.' },
+    { name: 'workout_push_03',   text: '정말 잘하고 있어요!' },
+    { name: 'workout_push_04',   text: '리듬 좋아요.' },
+    { name: 'workout_push_05',   text: '힘들어도 한 번 더 가요.' },
+    { name: 'workout_round_01',  text: '다음 라운드 시작합니다.' },
+    { name: 'workout_hold_01',   text: '그대로 유지해요.' },
+    { name: 'workout_finish_01', text: '운동 구간 끝났어요.' },
+  ]},
+  { title: '😮‍💨 휴식', files: [
+    { name: 'rest_start_01',   text: '쉬는 시간이에요.' },
+    { name: 'rest_start_02',   text: '잠깐 쉬어갈게요.' },
+    { name: 'rest_breathe_01', text: '숨 한번 고를게요.' },
+    { name: 'rest_breathe_02', text: '천천히 숨 쉬어볼게요.' },
+    { name: 'rest_half_01',    text: '휴식도 절반 지났어요.' },
+    { name: 'rest_10sec_01',   text: '곧 다시 시작해요.' },
+    { name: 'rest_ready_01',   text: '준비해주세요.' },
+    { name: 'rest_end_01',     text: '쉬는 시간 끝, 다시 갑니다.' },
+  ]},
+  { title: '🦷 양치', files: [
+    { name: 'brush_start_01',  text: '양치 시작해볼까요?' },
+    { name: 'brush_top_01',    text: '위쪽부터 닦아볼게요.' },
+    { name: 'brush_bottom_01', text: '아래쪽도 닦아볼까요?' },
+    { name: 'brush_left_01',   text: '왼쪽도 깨끗하게요.' },
+    { name: 'brush_right_01',  text: '오른쪽도 닦아볼게요.' },
+    { name: 'brush_end_01',    text: '우와, 양치 끝!' },
+  ]},
+  { title: '🎉 리액션', files: [
+    { name: 'reaction_cheer_01', text: '좋아요.' },
+    { name: 'reaction_cheer_02', text: '오, 잘하고 있어요.' },
+    { name: 'reaction_cheer_03', text: '아주 좋아요.' },
+    { name: 'reaction_01',       text: '와, 정말 잘했어요!' },
+  ]},
+  { title: '🔢 라운드 번호', files: Array.from({length:10}, (_,i) => ({
+    name: `num_round_${i+1}`, text: `${i+1}라운드.`
+  }))},
+  { title: '🔢 숫자 한자음 (카운트다운)', files: [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90].map(n => ({
+    name: `num_sino_${n}`, text: String(n)
+  }))},
+  { title: '🔢 숫자 고유어 (카운트업)', files: Array.from({length:30}, (_,i) => ({
+    name: `num_native_${i+1}`, text: `${i+1}번째`
+  }))},
+  { title: '🧘 명상 시작', files: [
+    { name: 'meditation_start_01', text: '숨을 천천히 들이마십니다 … 부드럽게 내쉽니다' },
+  ]},
+  { title: '🧘 명상 중간 (랜덤 재생)', files: [
+    { name: 'meditation_mid_01', text: '지금 이 순간에 집중해봅니다 … 아무 생각도 하지 않아도 괜찮습니다' },
+    { name: 'meditation_mid_02', text: '어깨의 힘을 빼고 … 편안하게 호흡합니다' },
+    { name: 'meditation_mid_03', text: '들이마시고 … 내쉽니다' },
+    { name: 'meditation_mid_04', text: '천천히 호흡을 느껴봅니다 … 숨의 흐름을 따라갑니다' },
+    { name: 'meditation_mid_05', text: '괜찮습니다 … 지금 그대로 충분합니다' },
+    { name: 'meditation_mid_06', text: '생각이 떠오르면 … 흘려보냅니다' },
+    { name: 'meditation_mid_07', text: '조용히 … 호흡에 집중합니다' },
+    { name: 'meditation_mid_08', text: '천천히 들이마시고 … 길게 내쉽니다' },
+  ]},
+  { title: '🧘 명상 종료', files: [
+    { name: 'meditation_end_01', text: '마무리할 시간입니다 … 천천히 눈을 뜹니다 … 오늘도 충분히 잘 해냈어요' },
+  ]},
+
+  { title: '🌙 수면 시작', files: [
+    { name: 'sleep_start_01', text: '이제 편안하게 눈을 감아요 … 하루 수고 많으셨어요' },
+  ]},
+  { title: '🌙 수면 중간 (랜덤 재생)', files: [
+    { name: 'sleep_mid_01', text: '천천히 숨을 들이마시고 … 부드럽게 내쉬어요' },
+    { name: 'sleep_mid_02', text: '몸의 힘을 완전히 놓아요 … 편안해요' },
+    { name: 'sleep_mid_03', text: '아무 생각도 하지 않아도 괜찮아요 … 그냥 쉬어요' },
+    { name: 'sleep_mid_04', text: '깊고 편안한 호흡 … 몸이 점점 무거워져요' },
+    { name: 'sleep_mid_05', text: '잘 하고 있어요 … 이대로 쉬어요' },
+    { name: 'sleep_mid_06', text: '편안해요 … 잘 자요' },
+  ]},
+  { title: '🌙 수면 종료', files: [
+    { name: 'sleep_end_01', text: '푹 쉬세요 … 잘 자요' },
+  ]},
+
+  { title: '🫧 ASMR 시작', files: [
+    { name: 'asmr_start_01', text: '천천히 눈을 감아요 … 아주 부드럽게 호흡해볼게요' },
+  ]},
+  { title: '🫧 ASMR 중간 (랜덤 재생)', files: [
+    { name: 'asmr_mid_01', text: '들이마시고 … 내쉬어요' },
+    { name: 'asmr_mid_02', text: '어깨의 힘을 빼요 … 편안해요' },
+    { name: 'asmr_mid_03', text: '감각에 집중해봐요 … 지금 이 순간만' },
+    { name: 'asmr_mid_04', text: '천천히 … 아주 천천히 호흡해요' },
+    { name: 'asmr_mid_05', text: '몸이 이완돼요 … 마음도 고요해요' },
+  ]},
+  { title: '🫧 ASMR 종료', files: [
+    { name: 'asmr_end_01', text: '잘 하셨어요 … 편안히 쉬세요' },
+  ]},
+]
+
+function setPack(pack, tabEl) {
+  currentPack = pack
+  document.querySelectorAll('.pack-tab').forEach(t => t.classList.remove('active'))
+  tabEl.classList.add('active')
+  stopAudio()
+  render()
+}
+
+function stopAudio() {
+  if (currentAudio) { currentAudio.pause(); currentAudio = null }
+  if (currentBtn) { currentBtn.textContent = '▶'; currentBtn.classList.remove('playing'); currentBtn = null }
+}
+
+function play(btn, path, e) {
+  e.stopPropagation()
+  if (currentAudio) {
+    currentAudio.pause(); currentAudio = null
+    const wasBtn = currentBtn
+    currentBtn.textContent = '▶'; currentBtn.classList.remove('playing'); currentBtn = null
+    if (wasBtn === btn) return
+  }
+  const audio = new Audio(path)
+  audio.onended = () => { btn.textContent = '▶'; btn.classList.remove('playing'); currentAudio = null; currentBtn = null }
+  audio.onerror = () => { btn.textContent = '✕'; btn.style.background = '#ccc'; currentAudio = null; currentBtn = null }
+  audio.play().catch(() => {})
+  currentAudio = audio; currentBtn = btn
+  btn.textContent = '■'; btn.classList.add('playing')
+}
+
+function toggleCheck(name, row, cb) {
+  if (checked.has(name)) {
+    checked.delete(name)
+    row.classList.remove('checked')
+    cb.checked = false
+  } else {
+    checked.add(name)
+    row.classList.add('checked')
+    cb.checked = true
+  }
+  updateBottom()
+}
+
+function getSelectedVoices() {
+  const voices = []
+  if (document.getElementById('vc-default')?.checked) voices.push('default')
+  if (document.getElementById('vc-energy')?.checked)  voices.push('energy')
+  return voices.length ? voices : ['default']
+}
+
+function updateBottom() {
+  const count = checked.size
+  const voices = getSelectedVoices()
+  const apiCalls = count * voices.length
+  const info = document.getElementById('bottom-info')
+  const btnShow = document.getElementById('btn-show')
+  const btnCopy = document.getElementById('btn-copy')
+  const cmdBox = document.getElementById('cmd-box')
+  const apiCount = document.getElementById('api-count')
+
+  if (count === 0) {
+    info.innerHTML = '선택된 파일 없음 — 재생성할 파일을 체크하세요'
+    if (apiCount) apiCount.textContent = ''
+    btnShow.disabled = true
+    btnCopy.disabled = true
+    cmdBox.style.display = 'none'
+    document.getElementById('btn-run').disabled = true
+  } else {
+    info.innerHTML = `<strong>${count}개</strong> 선택됨 — ▶ 직접 실행 또는 명령어 복사`
+    if (apiCount) apiCount.textContent = `API 호출 ${apiCalls}회 예상`
+    btnShow.disabled = false
+    document.getElementById('btn-run').disabled = false
+  }
+}
+
+function showCmd() {
+  const names = [...checked]
+  const voices = getSelectedVoices()
+  const rmLines = []
+  for (const n of names) {
+    for (const v of voices) rmLines.push(`rm -f public/audio/${v}/${n}.wav`)
+  }
+  const genLines = voices.map(v => `node generate_audio.cjs ${v} select ${names.join(',')}`)
+  const cmd = [
+    '# 선택한 파일 삭제',
+    ...rmLines,
+    '',
+    '# 선택 파일만 재생성 (select 모드 — API 호출 최소화)',
+    ...genLines,
+  ].join('\n')
+
+  const box = document.getElementById('cmd-box')
+  box.textContent = cmd
+  box.style.display = 'block'
+  document.getElementById('btn-copy').disabled = false
+}
+
+function copyCmd() {
+  const text = document.getElementById('cmd-box').textContent
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('btn-copy')
+    btn.textContent = '✅ 복사됨!'
+    btn.classList.add('copied')
+    setTimeout(() => { btn.textContent = '클립보드 복사'; btn.classList.remove('copied') }, 2000)
+  })
+}
+
+async function runDirect() {
+  const names = [...checked]
+  const btn = document.getElementById('btn-run')
+  const logBox = document.getElementById('log-box')
+  logBox.textContent = ''
+  logBox.style.display = 'block'
+  btn.disabled = true
+  btn.textContent = '⏳ 실행 중...'
+
+  const log = (msg) => {
+    logBox.textContent += msg + '\n'
+    logBox.scrollTop = logBox.scrollHeight
+  }
+
+  try {
+    const voices = getSelectedVoices()
+    const res = await fetch('http://localhost:3456/delete-and-generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ files: names, voices }),
+    })
+    const reader = res.body.getReader()
+    const decoder = new TextDecoder()
+    let buf = ''
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buf += decoder.decode(value, { stream: true })
+      const parts = buf.split('\n\n')
+      buf = parts.pop()
+      for (const part of parts) {
+        const line = part.replace(/^data: /, '').trim()
+        if (!line) continue
+        try {
+          const { msg } = JSON.parse(line)
+          if (msg === '__DONE__') {
+            log('\n✅ 모두 완료! 페이지 새로고침하면 새 파일로 재생됩니다.')
+            btn.textContent = '✅ 완료 — 새로고침'
+            btn.style.background = '#34c759'
+            btn.disabled = false
+            btn.onclick = () => location.reload()
+            clearAll()
+            return
+          }
+          log(msg)
+        } catch {}
+      }
+    }
+  } catch (e) {
+    log(`❌ 서버 연결 실패: http://localhost:3456`)
+    log(`   터미널에서 먼저 실행하세요: node audio-server.cjs`)
+    btn.textContent = '▶ 직접 실행'
+    btn.disabled = false
+  }
+}
+
+function clearAll() {
+  checked.clear()
+  document.querySelectorAll('.file-row.checked').forEach(r => r.classList.remove('checked'))
+  document.querySelectorAll('.cb').forEach(c => c.checked = false)
+  document.getElementById('cmd-box').style.display = 'none'
+  document.getElementById('btn-copy').disabled = true
+  updateBottom()
+}
+
+function render() {
+  const container = document.getElementById('content')
+  container.innerHTML = ''
+  sections.forEach(sec => {
+    const div = document.createElement('div')
+    const secKey = `${currentPack}__${sec.title}`
+    const isPassed = passedSections.has(secKey)
+    div.className = 'section' + (isPassed ? ' passed' : '')
+    div.innerHTML = `
+      <div class="section-header">
+        <span class="section-title">${sec.title}<span class="pass-badge">✅ 통과</span></span>
+        <div style="display:flex;align-items:center;gap:10px">
+          <label style="font-size:12px;color:#aaa;cursor:pointer;display:flex;align-items:center;gap:4px">
+            <input type="checkbox" onchange="toggleSection(this, ${JSON.stringify(sec.files.map(f=>f.name))})"> 전체선택
+          </label>
+          <button class="pass-btn ${isPassed ? 'active' : ''}" onclick="togglePass('${secKey}', this.closest('.section'), this)">
+            ${isPassed ? '✅ 통과' : '통과'}
+          </button>
+        </div>
+      </div>
+      <div class="file-grid"></div>`
+    const grid = div.querySelector('.file-grid')
+
+    sec.files.forEach(f => {
+      const path = `/audio/${currentPack}/${f.name}.wav`
+      const isChecked = checked.has(f.name)
+      const row = document.createElement('div')
+      row.className = 'file-row' + (isChecked ? ' checked' : '')
+      row.innerHTML = `
+        <input type="checkbox" class="cb" ${isChecked ? 'checked' : ''} onclick="toggleCheck('${f.name}', this.closest('.file-row'), this)">
+        <button class="play-btn" onclick="play(this, '${path}', event)">▶</button>
+        <span class="file-name">${f.name}</span>
+        <span class="file-text">${f.text}</span>
+        <span class="exist-status" id="s_${f.name}">…</span>
+      `
+      row.addEventListener('click', (e) => {
+        if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') return
+        const cb = row.querySelector('.cb')
+        toggleCheck(f.name, row, cb)
+      })
+      grid.appendChild(row)
+
+      const a = new Audio()
+      a.src = path
+      a.oncanplaythrough = () => {
+        const el = document.getElementById(`s_${f.name}`)
+        if (el) { el.textContent = '✅'; el.style.color = '#34c759' }
+      }
+      a.onerror = () => {
+        const el = document.getElementById(`s_${f.name}`)
+        if (el) { el.textContent = '❌'; el.style.color = '#ff3b30' }
+      }
+    })
+    container.appendChild(div)
+  })
+}
+
+function toggleSection(masterCb, names) {
+  names.forEach(name => {
+    const row = document.querySelector(`.file-row:has(#s_${name})`)
+    const cb = row?.querySelector('.cb')
+    if (!cb) return
+    if (masterCb.checked) {
+      checked.add(name); row.classList.add('checked'); cb.checked = true
+    } else {
+      checked.delete(name); row.classList.remove('checked'); cb.checked = false
+    }
+  })
+  updateBottom()
+}
+
+render()
+</script>
+</body>
+</html>
