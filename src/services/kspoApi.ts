@@ -44,14 +44,16 @@ export interface FacilityRecord {
   [key: string]: string | number | undefined
 }
 
-/** data.go.kr 응답의 공통 껍데기 */
+/** data.go.kr 응답의 공통 껍데기 (최상위 "response" 키로 한 번 더 감싸져 있음) */
 interface OpenApiResponse<T> {
-  header: { resultCode: string; resultMsg: string }
-  body: {
-    pageNo: string
-    totalCount: string
-    numOfRows: string
-    items: { item: T[] | T } | ''
+  response: {
+    header: { resultCode: string; resultMsg: string }
+    body: {
+      pageNo: string
+      totalCount: string
+      numOfRows: string
+      items: { item: T[] | T } | ''
+    }
   }
 }
 
@@ -72,10 +74,11 @@ async function callOpenApi<T>(
   const res = await fetch(url)
   if (!res.ok) throw new Error(`KSPO API 호출 실패: ${res.status}`)
   const data: OpenApiResponse<T> = await res.json()
-  if (data.header?.resultCode !== '00') {
-    throw new Error(`KSPO API 오류: ${data.header?.resultMsg ?? '알 수 없는 오류'}`)
+  const header = data.response?.header
+  if (header?.resultCode !== '00') {
+    throw new Error(`KSPO API 오류: ${header?.resultMsg ?? '알 수 없는 오류'}`)
   }
-  const items = data.body?.items
+  const items = data.response?.body?.items
   if (!items) return []
   return Array.isArray(items.item) ? items.item : items.item ? [items.item] : []
 }
@@ -102,8 +105,9 @@ export async function fetchFitness100Sample(query: FitnessQuery): Promise<Fitnes
   })
 
   // 클라이언트 재필터링 (서버 필터가 안 먹었을 경우를 대비)
+  // API 응답의 age_class는 숫자(JSON number)로 오는 경우가 있어 문자열로 맞춰 비교한다.
   let filtered = raw
-  if (query.ageClass) filtered = filtered.filter((r) => r.age_class === query.ageClass)
+  if (query.ageClass) filtered = filtered.filter((r) => String(r.age_class) === String(query.ageClass))
   if (query.sex) filtered = filtered.filter((r) => r.test_sex === query.sex)
   if (query.certGbn) filtered = filtered.filter((r) => r.cert_gbn === query.certGbn)
 
