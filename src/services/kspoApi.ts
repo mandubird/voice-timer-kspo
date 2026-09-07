@@ -3,14 +3,11 @@
  * - 국민체력100 체력인증센터 측정결과 정보 (SRVC_NFA_TEST_RESULT)
  * - 공공체육시설 상세 정보_GW (SRVC_SFMS_FACIL_INFO)
  *
- * 주의: 지금은 프로토타입 단계라 클라이언트에서 공공데이터포털을 직접 호출합니다.
- * 실서비스 배포 시에는 (1) 인증키가 번들에 노출되지 않도록, (2) CORS 문제를 피하기
- * 위해 서버리스 프록시(예: Vercel /api 함수)를 두는 것을 권장합니다.
+ * 인증키(serviceKey)는 클라이언트에 절대 내려보내지 않는다.
+ * 브라우저는 같은 도메인의 /api/kspo-fitness, /api/kspo-facility (Vercel 서버리스 함수)만
+ * 호출하고, 실제 apis.data.go.kr 요청과 인증키 사용은 서버에서만 이루어진다.
+ * (api/kspo-fitness.ts, api/kspo-facility.ts 참고)
  */
-
-const API_KEY_ENCODED = import.meta.env.VITE_KSPO_API_KEY_ENCODED as string
-const FITNESS100_ENDPOINT = import.meta.env.VITE_KSPO_FITNESS100_ENDPOINT as string
-const FACILITY_ENDPOINT = import.meta.env.VITE_KSPO_FACILITY_ENDPOINT as string
 
 /** 국민체력100 측정결과 레코드 (item_f001~052는 공식 필드 정의가 비공개라 원본 그대로 보존) */
 export interface Fitness100Record {
@@ -57,21 +54,15 @@ interface OpenApiResponse<T> {
   }
 }
 
-function buildUrl(endpoint: string, params: Record<string, string | number | undefined>) {
+async function callProxy<T>(
+  proxyPath: '/api/kspo-fitness' | '/api/kspo-facility',
+  params: Record<string, string | number | undefined>,
+): Promise<T[]> {
   const qs = Object.entries(params)
     .filter(([, v]) => v !== undefined && v !== '')
     .map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`)
     .join('&')
-  // serviceKey는 이미 포털에서 URL 인코딩된 값이라 그대로 붙인다 (이중 인코딩 방지)
-  return `${endpoint}?serviceKey=${API_KEY_ENCODED}&${qs}`
-}
-
-async function callOpenApi<T>(
-  endpoint: string,
-  params: Record<string, string | number | undefined>,
-): Promise<T[]> {
-  const url = buildUrl(endpoint, { ...params, resultType: 'json' })
-  const res = await fetch(url)
+  const res = await fetch(`${proxyPath}?${qs}`)
   if (!res.ok) throw new Error(`KSPO API 호출 실패: ${res.status}`)
   const data: OpenApiResponse<T> = await res.json()
   const header = data.response?.header
@@ -96,7 +87,7 @@ export interface FitnessQuery {
  * 넉넉히 받아온 뒤 클라이언트에서 다시 한 번 필터링한다.
  */
 export async function fetchFitness100Sample(query: FitnessQuery): Promise<Fitness100Record[]> {
-  const raw = await callOpenApi<Fitness100Record>(FITNESS100_ENDPOINT, {
+  const raw = await callProxy<Fitness100Record>('/api/kspo-fitness', {
     pageNo: 1,
     numOfRows: query.numOfRows ?? 100,
     age_class: query.ageClass,
@@ -133,7 +124,7 @@ export interface FacilityQuery {
 }
 
 export async function fetchFacilities(query: FacilityQuery): Promise<FacilityRecord[]> {
-  return callOpenApi<FacilityRecord>(FACILITY_ENDPOINT, {
+  return callProxy<FacilityRecord>('/api/kspo-facility', {
     pageNo: 1,
     numOfRows: query.numOfRows ?? 30,
     fmng_cp_nm: query.sidoNm,

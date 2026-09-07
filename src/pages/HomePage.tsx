@@ -139,8 +139,8 @@ export default function HomePage() {
         </p>
       </header>
 
-      {/* 국민체력100 맞춤 루틴 진입 배너 */}
-      <section aria-label="국민체력100 맞춤 루틴" className="mb-8">
+      {/* 국민체육진흥공단 공공데이터 연동 진입 배너 */}
+      <section aria-label="국민체육진흥공단 공공데이터" className="mb-8 space-y-2">
         <button
           type="button"
           onClick={() => navigate('/fitness-goal')}
@@ -150,6 +150,18 @@ export default function HomePage() {
           <div className="min-w-0 flex-1">
             <p className="text-[15px] font-extrabold text-[#0F1F4D]">국민체력100 맞춤 루틴</p>
             <p className="mt-0.5 text-[12px] text-[#4A5B7A]">연령대·성별 정보로 맞춤 운동 추천받기</p>
+          </div>
+          <ChevronRight className="size-5 shrink-0 text-black/25" strokeWidth={2} />
+        </button>
+        <button
+          type="button"
+          onClick={() => navigate('/facilities')}
+          className="flex w-full items-center gap-4 rounded-[18px] border border-[#C9E9D9]/80 bg-gradient-to-r from-[#EAFBF2] to-[#F3FBF0] p-4 text-left transition active:scale-[0.99]"
+        >
+          <span className="text-3xl" aria-hidden>📍</span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[15px] font-extrabold text-[#0F4D2A]">주변 공공체육시설 찾기</p>
+            <p className="mt-0.5 text-[12px] text-[#4A7A5C]">전국 공공체육시설 데이터에서 운동할 곳 찾기</p>
           </div>
           <ChevronRight className="size-5 shrink-0 text-black/25" strokeWidth={2} />
         </button>

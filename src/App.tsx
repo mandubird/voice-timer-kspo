@@ -7,6 +7,7 @@ import IntervalPage from './pages/IntervalPage'
 import BrushingPage from './pages/BrushingPage'
 import RunSessionPage from './pages/RunSessionPage'
 import FitnessGoalPage from './pages/FitnessGoalPage'
+import FacilityFinderPage from './pages/FacilityFinderPage'
 import PresetsPage from './pages/PresetsPage'
 import PrivacyPage from './pages/PrivacyPage'
 import { PaywallModal } from './components/PaywallModal'
@@ -38,6 +39,7 @@ export default function App() {
         <Route path="/brushing" element={<BrushingPage />} />
         <Route path="/session" element={<RunSessionPage />} />
         <Route path="/fitness-goal" element={<FitnessGoalPage />} />
+        <Route path="/facilities" element={<FacilityFinderPage />} />
         <Route path="/presets" element={<PresetsPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
       </Routes>

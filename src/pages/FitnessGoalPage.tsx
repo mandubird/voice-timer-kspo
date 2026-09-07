@@ -241,6 +241,15 @@ export default function FitnessGoalPage() {
                 이 루틴으로 시작하기
               </button>
             </div>
+
+            <button
+              type="button"
+              onClick={() => navigate('/facilities')}
+              className="flex min-h-12 w-full items-center justify-center gap-2 rounded-[16px] border border-[#C9E9D9]/80 bg-[#EAFBF2] text-[13px] font-bold text-[#0F4D2A] transition active:scale-[0.99]"
+            >
+              <span aria-hidden>📍</span>
+              집 말고 밖에서 하고 싶다면 — 내 동네 공공체육시설 찾아보기
+            </button>
           </>
         )}
       </div>
