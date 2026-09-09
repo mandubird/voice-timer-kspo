@@ -434,12 +434,6 @@ export default function RunSessionPage() {
             />
             {/* 세션 중 하단 정보 */}
             <div className="mb-2 flex flex-col items-center gap-3">
-              {/* 인터벌: 라운드 진행 표시 */}
-              {config?.mode === 'interval' && (
-                <p className="text-[15px] font-semibold text-[#7A7F8A]">
-                  {intervalRound} / {config.settings.rounds}라운드
-                </p>
-              )}
               {/* 무료 사용자: Pro 힌트 */}
               {!isPro && (
                 <button

@@ -17,24 +17,26 @@ export default function FacilityFinderPage() {
   const [faciTypeNm, setFaciTypeNm] = useState('')
   const [step, setStep] = useState<Step>('form')
   const [facilities, setFacilities] = useState<FacilityRecord[]>([])
+  const [totalCount, setTotalCount] = useState(0)
   const [errorMsg, setErrorMsg] = useState('')
 
   const search = async () => {
     setStep('loading')
     setErrorMsg('')
     try {
-      const results = await fetchFacilities({
+      const { items, totalCount: total } = await fetchFacilities({
         sidoNm: sidoNm || undefined,
         sigunguNm: sigunguNm.trim() || undefined,
         faciTypeNm: faciTypeNm.trim() || undefined,
         numOfRows: 30,
       })
-      if (results.length === 0) {
+      if (items.length === 0) {
         setStep('error')
         setErrorMsg('조건에 맞는 공공체육시설을 찾지 못했어요. 검색 범위를 넓혀서 다시 시도해 보세요.')
         return
       }
-      setFacilities(results)
+      setFacilities(items)
+      setTotalCount(total)
       setStep('result')
     } catch (e) {
       setStep('error')
@@ -108,7 +110,9 @@ export default function FacilityFinderPage() {
           <>
             <section className="rounded-[18px] border border-[#E8EAF0] bg-white p-4 shadow-sm">
               <h2 className="text-sm font-semibold text-[#111111]">
-                검색 결과 {facilities.length}건
+                {totalCount > facilities.length
+                  ? `검색 결과 총 ${totalCount}건 중 ${facilities.length}건 표시`
+                  : `검색 결과 ${facilities.length}건`}
               </h2>
               <ul className="mt-3 space-y-2">
                 {facilities.map((f, i) => (

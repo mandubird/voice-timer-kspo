@@ -141,6 +141,12 @@ export default function HomePage() {
 
       {/* 국민체육진흥공단 공공데이터 연동 진입 배너 */}
       <section aria-label="국민체육진흥공단 공공데이터" className="mb-8 space-y-2">
+        <div className="mb-3 flex items-center gap-1.5">
+          <h2 className="text-xs font-semibold text-[#7A7F8A]">국민체육진흥공단 공공데이터 활용</h2>
+          <span className="rounded-full bg-[#EEF3FF] px-1.5 py-0.5 text-[10px] font-bold text-[#2F6BFF]">
+            공공데이터
+          </span>
+        </div>
         <button
           type="button"
           onClick={() => navigate('/fitness-goal')}

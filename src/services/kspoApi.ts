@@ -54,10 +54,10 @@ interface OpenApiResponse<T> {
   }
 }
 
-async function callProxy<T>(
+async function callProxyRaw<T>(
   proxyPath: '/api/kspo-fitness' | '/api/kspo-facility',
   params: Record<string, string | number | undefined>,
-): Promise<T[]> {
+): Promise<{ items: T[]; totalCount: number }> {
   const qs = Object.entries(params)
     .filter(([, v]) => v !== undefined && v !== '')
     .map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`)
@@ -70,8 +70,17 @@ async function callProxy<T>(
     throw new Error(`KSPO API 오류: ${header?.resultMsg ?? '알 수 없는 오류'}`)
   }
   const items = data.response?.body?.items
-  if (!items) return []
-  return Array.isArray(items.item) ? items.item : items.item ? [items.item] : []
+  const list = !items ? [] : Array.isArray(items.item) ? items.item : items.item ? [items.item] : []
+  const totalCount = Number(data.response?.body?.totalCount ?? list.length)
+  return { items: list, totalCount: Number.isFinite(totalCount) ? totalCount : list.length }
+}
+
+async function callProxy<T>(
+  proxyPath: '/api/kspo-fitness' | '/api/kspo-facility',
+  params: Record<string, string | number | undefined>,
+): Promise<T[]> {
+  const { items } = await callProxyRaw<T>(proxyPath, params)
+  return items
 }
 
 export interface FitnessQuery {
@@ -123,8 +132,13 @@ export interface FacilityQuery {
   numOfRows?: number
 }
 
-export async function fetchFacilities(query: FacilityQuery): Promise<FacilityRecord[]> {
-  return callProxy<FacilityRecord>('/api/kspo-facility', {
+export interface FacilitySearchResult {
+  items: FacilityRecord[]
+  totalCount: number
+}
+
+export async function fetchFacilities(query: FacilityQuery): Promise<FacilitySearchResult> {
+  return callProxyRaw<FacilityRecord>('/api/kspo-facility', {
     pageNo: 1,
     numOfRows: query.numOfRows ?? 30,
     fmng_cp_nm: query.sidoNm,

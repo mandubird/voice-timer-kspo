@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { PageShell } from '../components/PageShell'
 import { useSessionStore } from '../store/sessionStore'
 import { useSettingsStore, getVoiceProfileFromPack } from '../store/settingsStore'
-import { primeSpeechFromUserGesture } from '../utils/sessionSpeechPrime'
+import { resumeAudioContext } from '../utils/soundEffects'
+import { stopAllVoiceOutput } from '../utils/audioPlayer'
 import { pickBestKoreanVoice } from '../hooks/useVoice'
 import { speakText } from '../utils/speechUtils'
 import { fetchFitness100Sample, parsePresNote, type Fitness100Record } from '../services/kspoApi'
@@ -96,14 +97,19 @@ export default function FitnessGoalPage() {
     }
     const active: ActiveSessionConfig = { mode: 'interval', settings }
 
-    primeSpeechFromUserGesture(active)
-    // 팩 설정과 무관하게 데이터 기반 루틴 안내는 확실히 들려준다
+    // 이 루틴은 매번 다른 운동 목록을 나열하는 문구라 사전 녹음(wav) 안내가 없으므로,
+    // 공용 시작 효과음(common_start wav)+휘슬 대신 이 안내만 단독으로 들려준다.
+    // (같이 재생하면 wav 안내음/휘슬과 TTS 음성이 겹쳐서 서로 묻히는 문제가 있었음)
+    void resumeAudioContext()
+    stopAllVoiceOutput()
     const voice = pickBestKoreanVoice(voiceProfile.gender)
     speakText(startScript, voiceProfile, { interrupt: false, voice })
 
     useSessionStore.getState().loadSession(active, { startPaused: true })
     navigate('/session')
-    window.setTimeout(() => useSessionStore.getState().resume(), 2600)
+    // 안내 문구를 다 읽을 때까지 기다렸다가 세션을 시작 (글자수 기반 추정 + 여유시간)
+    const estimatedSpeechMs = Math.max(2600, startScript.length * 90 + 800)
+    window.setTimeout(() => useSessionStore.getState().resume(), estimatedSpeechMs)
   }
 
   return (
