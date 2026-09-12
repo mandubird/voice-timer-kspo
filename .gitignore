@@ -28,3 +28,4 @@ dist-ssr
 # Design source files (not needed for the deployed web app)
 *.ait
 *.psd
+_to_delete/
