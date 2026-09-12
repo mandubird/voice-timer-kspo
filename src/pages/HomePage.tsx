@@ -155,7 +155,7 @@ export default function HomePage() {
           <span className="text-3xl" aria-hidden>🏅</span>
           <div className="min-w-0 flex-1">
             <p className="text-[15px] font-extrabold text-[#0F1F4D]">국민체력100 기반 맞춤 루틴</p>
-            <p className="mt-0.5 text-[12px] text-[#4A5B7A]">연령대·성별 정보로 맞춤 운동 추천받기</p>
+            <p className="mt-0.5 text-[12px] text-[#4A5B7A]">내 체력 수준 입력하고 맞춤 루틴 받기</p>
           </div>
           <ChevronRight className="size-5 shrink-0 text-black/25" strokeWidth={2} />
         </button>
