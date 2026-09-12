@@ -28,6 +28,8 @@ const chip = (on: boolean) =>
 
 const SCORE_OPTIONS = [1, 2, 3, 4, 5]
 
+const CIRCLED: Record<number, string> = { 1: '①', 2: '②', 3: '③', 4: '④', 5: '⑤' }
+
 const CATEGORY_FIELDS: { key: FitnessCategory; hint: string }[] = [
   { key: 'strength', hint: '팔굽혀펴기 · 악력 등' },
   { key: 'cardio', hint: '왕복 오래달리기 · 걷기 등' },
@@ -106,11 +108,12 @@ export default function FitnessGoalPage() {
   }
 
   return (
-    <PageShell title="국민체력100 맞춤 루틴">
+    <PageShell title="국민체력100 기반 맞춤 루틴">
       <div className="space-y-6 text-[#111111]">
         <p className="text-[13px] leading-relaxed text-[#7A7F8A]">
-          국민체력100 체력측정 결과지의 등급(또는 평소 체감 수준)을 입력하면, 가장 부족한 항목을 채워주는
-          오늘의 루틴을 만들어드려요. 처방이 아니니 개인 컨디션에 맞게 조절해 주세요.
+          현재 체력 수준을 입력해 주세요. 국민체력100 측정 결과가 있다면 참고해서 선택하고, 없다면 평소
+          체감 수준으로 입력해도 좋아요. 가장 부족한 항목을 채워주는 오늘의 루틴을 만들어드려요 — 처방이
+          아니니 개인 컨디션에 맞게 조절해 주세요.
         </p>
 
         {step === 'form' && (
@@ -134,9 +137,10 @@ export default function FitnessGoalPage() {
                     </button>
                   ))}
                 </div>
-                <div className="mt-1 flex justify-between text-[10px] text-[#B0B4BE]">
-                  <span>1 · 부족</span>
-                  <span>5 · 우수</span>
+                <div className="mt-1 grid grid-cols-3 text-[10px] text-[#B0B4BE]">
+                  <span className="text-left">1 · 부족</span>
+                  <span className="text-center">3 · 보통</span>
+                  <span className="text-right">5 · 우수</span>
                 </div>
               </section>
             ))}
@@ -156,6 +160,10 @@ export default function FitnessGoalPage() {
             <section className="rounded-[18px] border border-[#E8EAF0] bg-white p-4 shadow-sm">
               <h2 className="text-sm font-semibold text-[#111111]">오늘의 추천 루틴</h2>
               <p className="mt-1 text-[11px] text-[#7A7F8A]">{plan.explanation}</p>
+              <p className="mt-1.5 text-[11px] font-medium text-[#B0B4BE]">
+                근력 {CIRCLED[assessment.strength]} · 심폐지구력 {CIRCLED[assessment.cardio]} · 유연성{' '}
+                {CIRCLED[assessment.flexibility]}
+              </p>
               {deltaMsg && (
                 <p className="mt-2 rounded-[10px] bg-[#F3F7FF] px-3 py-2 text-[11px] font-medium text-[#2F6BFF]">
                   {deltaMsg}
