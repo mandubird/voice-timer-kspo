@@ -48,6 +48,8 @@ export interface IntervalSettings {
   vibration?: boolean
   /** 타이머 시작 시 재생할 음성 멘트 (무료 사용자 TTS) */
   startScript?: string
+  /** 라운드별 운동 이름(예: 국민체력100 맞춤 루틴의 "스쿼트", "플랭크" 등). 있으면 라운드 전환 시 이 이름을 함께 안내한다 */
+  roundLabels?: string[]
 }
 
 export interface BrushingSettings {

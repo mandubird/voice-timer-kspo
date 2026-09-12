@@ -84,6 +84,8 @@ export default function RunSessionPage() {
   const modeLabel = config ? MODE_LABEL[config.mode] ?? config.mode : ''
   const isRunning = status === 'running'
   const isFinished = status === 'finished'
+  const isFitnessRoundSession =
+    config?.mode === 'interval' && !!config.settings.roundLabels && config.settings.roundLabels.length > 0
 
   let mainValue: number | string = 0
   let unitLabel = '초'
@@ -101,7 +103,10 @@ export default function RunSessionPage() {
     mainValue = intervalRemaining
     unitLabel = '초'
     const phaseKo = intervalPhase === 'work' ? '운동' : '휴식'
-    subtitle = `${phaseKo} · 라운드 ${intervalRound} / ${config.settings.rounds}`
+    const roundLabel = config.settings.roundLabels?.[intervalRound - 1]
+    subtitle = roundLabel
+      ? `${roundLabel} · 라운드 ${intervalRound} / ${config.settings.rounds}`
+      : `${phaseKo} · 라운드 ${intervalRound} / ${config.settings.rounds}`
   } else if (config?.mode === 'brushing') {
     // brushing
     mainValue = brushingRemaining
@@ -193,12 +198,14 @@ export default function RunSessionPage() {
         // 휴식 → 운동: a("다음 라운드 시작합니다") 끝난 후 b("N라운드") → 휘슬
         // 무료 사용자(audioPack='none'): WAV 없음 → TTS 폴백
         const roundNum = intervalRound
+        const roundLabel = config.settings.roundLabels?.[roundNum - 1]
         stopAllVoiceOutput()
         void (async () => {
           const okRound = await playAudioFileToEnd(voiceFiles.workout.round[0])
           if (!okRound) speak('다음 라운드 시작합니다', { interrupt: false })
           const okNum = await playAudioFileToEnd(`num_round_${roundNum}`)
           if (!okNum) speak(`${roundNum}라운드`, { interrupt: false })
+          if (roundLabel) speak(roundLabel, { interrupt: false })
           playWhistle()
         })()
       }
@@ -402,6 +409,36 @@ export default function RunSessionPage() {
                   ? MID_VOICE_FINISH[config.settings.midVoiceSet]?.msg ?? '수고하셨습니다'
                   : '수고하셨습니다'}
             </p>
+            {isFitnessRoundSession && (
+              <div className="mt-8 w-full space-y-2 text-left">
+                <p className="text-center text-[12px] font-semibold text-[#7A7F8A]">
+                  오늘 루틴을 완료했어요. 다음도 이어가고 싶다면
+                </p>
+                <a
+                  href="https://nfa.kspo.or.kr/intro/centerList.kspo"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex min-h-12 w-full items-center justify-center gap-2 rounded-[14px] border border-[#E8EAF0] bg-white text-[13px] font-bold text-[#111111]"
+                >
+                  <span aria-hidden>📍</span> 내 주변 체력인증센터 찾기
+                </a>
+                <button
+                  type="button"
+                  onClick={() => navigate('/facilities')}
+                  className="flex min-h-12 w-full items-center justify-center gap-2 rounded-[14px] border border-[#C9E9D9]/80 bg-[#EAFBF2] text-[13px] font-bold text-[#0F4D2A] transition active:scale-[0.99]"
+                >
+                  <span aria-hidden>🏃</span> 가까운 공공체육시설 찾기
+                </button>
+                <a
+                  href="https://nfa.kspo.or.kr/"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex min-h-12 w-full items-center justify-center gap-2 rounded-[14px] border border-[#E8EAF0] bg-white text-[13px] font-bold text-[#111111]"
+                >
+                  <span aria-hidden>📅</span> 국민체력100 체력증진 프로그램 보기
+                </a>
+              </div>
+            )}
             {!isPro && (
               <button
                 type="button"
