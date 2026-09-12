@@ -32,15 +32,6 @@ interface SettingsStoreState {
   closePaywall: () => void
 }
 
-function getInitialPro(): boolean {
-  if (typeof window === 'undefined') return false
-  try {
-    return window.localStorage.getItem('voice_timer_is_pro') === 'true'
-  } catch {
-    return false
-  }
-}
-
 function getInitialAudioPack(): AudioPack {
   // 무료 사용자는 항상 default — energy는 Pro 전용, none은 WKWebView에서 무음
   if (typeof window === 'undefined') return 'default'
@@ -58,7 +49,10 @@ function getInitialAudioPack(): AudioPack {
 export const useSettingsStore = create<SettingsStoreState>((set, get) => ({
   soundEnabled: true,
   setSoundEnabled: (soundEnabled) => set({ soundEnabled }),
-  isPro: getInitialPro(),
+  // 공모전 심사용 배포본: 결제 팝업/잠금 기능/전면광고 없이 핵심 기능(맞춤 루틴·음성 코칭)을
+  // 바로 시연할 수 있도록 Pro 상태로 고정한다. (실제 결제는 토스 앱 밖에서는 동작하지 않음 —
+  // src/utils/tossProPayment.ts 참고. 원본 토스 미니앱에는 영향 없음 — 이 포크에서만 변경)
+  isPro: true,
   audioPack: getInitialAudioPack(),
   setAudioPack: (audioPack) => {
     set({ audioPack })
